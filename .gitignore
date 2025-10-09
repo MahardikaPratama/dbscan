@@ -1,0 +1,49 @@
+# Build artifacts
+/build/
+
+# CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+CMakeLists.txt.user
+
+# Compiled binaries and object files
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+
+# IDE/editor files
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# Logs
+.log
+
+# Generated/temporary datasets or outputs
+/data/ClusteredOutput.csv
+
+# Core dumps
+core
+core.*
+
+# Coverage
+coverage/
+
+# Unit test artifacts
+test_results/
+
+# Ignore gitignore itself? (keep it tracked)
+# .gitignore
