@@ -30,7 +30,6 @@ namespace Utils
 
     double haversineDistance(const Point &p1, const Point &p2);
 
-    double generateKDistanceEpsilon(const std::vector<Point> &points, int minPts);
 }
 
 #endif // UTILS_H
