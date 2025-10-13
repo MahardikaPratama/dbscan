@@ -30,7 +30,7 @@ namespace Utils
 
     double haversineDistance(const Point &p1, const Point &p2);
 
-    std::vector<double> generateKDistanceData(const std::vector<Point> &points, int k, const std::string &outputFilename);
+    double generateKDistanceEpsilon(const std::vector<Point> &points, int minPts);
 }
 
 #endif // UTILS_H

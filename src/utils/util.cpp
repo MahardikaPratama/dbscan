@@ -112,18 +112,23 @@ double Utils::haversineDistance(const Point &p1, const Point &p2)
     return horiz_km;
 }
 
-std::vector<double> Utils::generateKDistanceData(
-    const std::vector<Point> &points,
-    int k,
-    const std::string &outputFilename)
+double Utils::generateKDistanceEpsilon(const std::vector<Point> &points, int minPts)
 {
-    std::vector<double> kDistances;
-
-    if (points.empty() || k <= 0)
+    if (points.empty() || minPts <= 0)
     {
         std::cerr << "Invalid input for k-distance generation.\n";
-        return kDistances;
+        return 0.0;
     }
+
+    if (minPts <= 1)
+    {
+        std::cerr << "Warning: minPts <= 1 is unusual for DBSCAN. Consider minPts >= 3.\n";
+    }
+
+    std::vector<double> kDistances;
+    kDistances.reserve(points.size());
+
+    int kIndex = std::max(0, minPts - 1); // because distances excludes self
 
     for (size_t i = 0; i < points.size(); ++i)
     {
@@ -134,34 +139,27 @@ std::vector<double> Utils::generateKDistanceData(
         {
             if (i == j)
                 continue;
-
             distances.push_back(haversineDistance(points[i], points[j]));
         }
 
-        std::sort(distances.begin(), distances.end());
+        if (distances.size() < static_cast<size_t>(kIndex + 1))
+            continue;
 
-        if (distances.size() >= static_cast<size_t>(k))
-        {
-            kDistances.push_back(distances[k - 1]);
-        }
+        // faster: nth_element
+        std::nth_element(distances.begin(), distances.begin() + kIndex, distances.end());
+        double kth = distances[kIndex];
+        kDistances.push_back(kth);
     }
+
+    if (kDistances.empty())
+        return 0.0;
 
     std::sort(kDistances.begin(), kDistances.end());
 
-    std::ofstream outFile(outputFilename);
-    if (!outFile.is_open())
-    {
-        std::cerr << "Failed to write k-distance file: " << outputFilename << std::endl;
-        return kDistances;
-    }
-
-    outFile << "Index,k_distance_km\n";
-    for (size_t i = 0; i < kDistances.size(); ++i)
-    {
-        outFile << i + 1 << "," << kDistances[i] << "\n";
-    }
-    outFile.close();
-
-    std::cout << "k-distance data saved to: " << outputFilename << std::endl;
-    return kDistances;
+    // choose percentile or median. Example: 90th percentile
+    size_t idx = static_cast<size_t>(kDistances.size() * 0.9);
+    if (idx >= kDistances.size())
+        idx = kDistances.size() - 1;
+    double epsilon = kDistances[idx];
+    return epsilon;
 }
