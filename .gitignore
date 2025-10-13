@@ -47,3 +47,14 @@ test_results/
 
 # Ignore gitignore itself? (keep it tracked)
 # .gitignore
+
+# python cache
+__pycache__/
+*.pyc
+.venv/
+
+datasets/
+output/
+
+*.gpg
+*.png

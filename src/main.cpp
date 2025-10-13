@@ -18,10 +18,18 @@
 #include "algorithm/dbscan.h"
 #include "utils/util.h"
 #include <iostream>
+#include <filesystem>
+#include <algorithm>
+#include <cctype>
 
-int main()
+int main(int argc, char *argv[])
 {
-    std::string filename = "../data/TrackDataset.csv";
+    if (argc < 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <input_csv_path>\n";
+        return 1;
+    }
+    std::string filename = argv[1];
     std::vector<Point> points = Utils::readCSV(filename);
 
     if (points.empty())
@@ -30,12 +38,35 @@ int main()
         return 1;
     }
 
-    double epsilon = 2;
-    int minPts = 3;
+    int minPts = 1;
+    // Choose epsilon based on filename: use larger radius for Airplane datasets
+    std::string lowerFilename = filename;
+    std::transform(lowerFilename.begin(), lowerFilename.end(), lowerFilename.begin(), ::tolower);
+    double epsilon = 0.3; // default in kilometers (300 meters)
+    if (lowerFilename.find("airplane") != std::string::npos)
+    {
+        epsilon = 9.26; // ~5 nautical miles in kilometers
+    }
     DBSCAN dbscan(epsilon, minPts, points);
     dbscan.run();
 
-    Utils::writeCSV("../data/ClusteredOutput.csv", points);
-    std::cout << "DBSCAN completed. Results written to ClusteredOutput.csv\n";
+    namespace fs = std::filesystem;
+    fs::path inputPath(filename);
+    std::string stem = inputPath.stem().string();
+    fs::path outDir = fs::path("../output");
+    if (!fs::exists(outDir))
+    {
+        std::error_code ec;
+        fs::create_directories(outDir, ec);
+        if (ec)
+        {
+            std::cerr << "Failed to create output directory: " << outDir << " (" << ec.message() << ")\n";
+            return 1;
+        }
+    }
+    fs::path outPath = outDir / ("Result_" + stem + ".csv");
+
+    Utils::writeCSV(outPath.string(), points);
+    std::cout << "DBSCAN completed. Results written to " << outPath << "\n";
     return 0;
 }

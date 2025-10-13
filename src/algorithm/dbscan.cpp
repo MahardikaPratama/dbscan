@@ -16,6 +16,7 @@
  */
 
 #include "dbscan.h"
+#include "utils/util.h"
 #include <cmath>
 #include <vector>
 
@@ -49,20 +50,12 @@ void DBSCAN::run()
     }
 }
 
-double DBSCAN::calculateDistance(const Point &p1, const Point &p2)
-{
-    double dx = p2.lat - p1.lat;
-    double dy = p2.lon - p1.lon;
-    double dz = p2.alt - p1.alt;
-    return sqrt(dx * dx + dy * dy + dz * dz);
-}
-
 std::vector<int> DBSCAN::regionQuery(int pointIndex)
 {
     std::vector<int> neighbors;
     for (size_t i = 0; i < m_points.size(); ++i)
     {
-        if (calculateDistance(m_points[pointIndex], m_points[i]) <= m_epsilon)
+        if (Utils::haversineDistance(m_points[pointIndex], m_points[i]) <= m_epsilon)
         {
             neighbors.push_back(i);
         }

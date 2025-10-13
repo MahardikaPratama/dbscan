@@ -25,7 +25,12 @@
 namespace Utils
 {
     std::vector<Point> readCSV(const std::string &filename);
+
     void writeCSV(const std::string &filename, const std::vector<Point> &points);
+
+    double haversineDistance(const Point &p1, const Point &p2);
+
+    std::vector<double> generateKDistanceData(const std::vector<Point> &points, int k, const std::string &outputFilename);
 }
 
 #endif // UTILS_H

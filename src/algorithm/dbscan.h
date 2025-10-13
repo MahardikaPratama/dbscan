@@ -27,7 +27,7 @@ inline constexpr int UNCLASSIFIED = 0;
 struct Point
 {
     std::string object_id;
-    double lat{}, lon{}, alt{};
+    double lat{}, lon{};
     int clusterId{UNCLASSIFIED};
     bool isVisited{false};
 };
@@ -44,7 +44,7 @@ private:
     double m_epsilon;
     int m_minPts;
 
-    double calculateDistance(const Point &p1, const Point &p2);
+    // distance computation moved to Utils
 
     std::vector<int> regionQuery(int pointIndex);
 
