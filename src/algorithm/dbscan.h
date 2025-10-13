@@ -28,6 +28,7 @@ struct Point
 {
     std::string object_id;
     double lat{}, lon{};
+    int sensor{0};
     int clusterId{UNCLASSIFIED};
     bool isVisited{false};
 };

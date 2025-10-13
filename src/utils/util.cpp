@@ -39,13 +39,14 @@ std::vector<Point> Utils::readCSV(const std::string &filename)
     {
         std::stringstream ss(line);
         Point p;
-        std::string id, lat, lon, alt;
+        std::string id, lat, lon, sensor;
 
         std::getline(ss, id, ',');
         std::getline(ss, lat, ',');
         std::getline(ss, lon, ',');
+        std::getline(ss, sensor, ',');
         // Basic validation: skip empty lines or header row
-        if (id.empty() || lat.empty() || lon.empty())
+        if (id.empty() || lat.empty() || lon.empty() || sensor.empty())
         {
             // Could be a header row or malformed line - skip it
             continue;
@@ -56,6 +57,7 @@ std::vector<Point> Utils::readCSV(const std::string &filename)
         {
             p.lat = std::stod(lat);
             p.lon = std::stod(lon);
+            p.sensor = std::stoi(sensor);
         }
         catch (const std::invalid_argument &)
         {
@@ -89,13 +91,14 @@ void Utils::writeCSV(const std::string &filename, const std::vector<Point> &poin
     }
 
     // Write header row so downstream tools can read the columns
-    file << "ObjectID,Latitude,Longitude,ClusterId\n";
+    file << "ObjectID,Latitude,Longitude,Sensor,ClusterId\n";
 
     for (const auto &p : points)
     {
         file << p.object_id << ","
              << p.lat << ","
              << p.lon << ","
+             << p.sensor << ","
              << p.clusterId << "\n";
     }
 
