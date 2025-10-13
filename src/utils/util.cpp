@@ -120,11 +120,6 @@ double Utils::generateKDistanceEpsilon(const std::vector<Point> &points, int min
         return 0.0;
     }
 
-    if (minPts <= 1)
-    {
-        std::cerr << "Warning: minPts <= 1 is unusual for DBSCAN. Consider minPts >= 3.\n";
-    }
-
     std::vector<double> kDistances;
     kDistances.reserve(points.size());
 
