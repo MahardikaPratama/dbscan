@@ -20,6 +20,7 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
+#include <numeric>
 #include <cctype>
 
 int main(int argc, char *argv[])
@@ -53,7 +54,7 @@ int main(int argc, char *argv[])
     namespace fs = std::filesystem;
     fs::path inputPath(filename);
     std::string stem = inputPath.stem().string();
-    fs::path outDir = fs::path("../output");
+    fs::path outDir = fs::path("output");
     if (!fs::exists(outDir))
     {
         std::error_code ec;
@@ -66,7 +67,31 @@ int main(int argc, char *argv[])
     }
     fs::path outPath = outDir / ("Result_" + stem + ".csv");
 
-    Utils::writeCSV(outPath.string(), points);
+    std::vector<double> accuracies;
+    for (const auto &p : points)
+    {
+        // Hitung jumlah baris dengan ObjectID dan ClusterId yang sama
+        int count_objid_cluster = std::count_if(points.begin(), points.end(), [&](const Point &q)
+                                                { return q.object_id == p.object_id && q.clusterId == p.clusterId; });
+        // Hitung jumlah baris dengan ClusterId yang sama
+        int count_cluster = std::count_if(points.begin(), points.end(), [&](const Point &q)
+                                          { return q.clusterId == p.clusterId; });
+        // Hitung jumlah baris dengan ObjectID yang sama
+        int count_objid = std::count_if(points.begin(), points.end(), [&](const Point &q)
+                                        { return q.object_id == p.object_id; });
+        // Hitung jumlah baris dengan ObjectID dan ClusterId yang sama (sama dengan count_objid_cluster)
+        double acc1 = count_objid_cluster / (double)(count_cluster > 0 ? count_cluster : 1);
+        double acc2 = count_objid_cluster / (double)(count_objid > 0 ? count_objid : 1);
+        double accuracy = std::min(acc1, acc2);
+        accuracies.push_back(accuracy);
+    }
+    // Akurasi total
+    double total_accuracy = 0.0;
+    if (!accuracies.empty())
+    {
+        total_accuracy = std::accumulate(accuracies.begin(), accuracies.end(), 0.0) / accuracies.size();
+    }
     std::cout << "DBSCAN completed. Results written to " << outPath << "\n";
+    Utils::writeCSV(outPath.string(), points, accuracies, total_accuracy);
     return 0;
 }

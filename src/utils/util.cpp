@@ -81,7 +81,7 @@ std::vector<Point> Utils::readCSV(const std::string &filename)
     return points;
 }
 
-void Utils::writeCSV(const std::string &filename, const std::vector<Point> &points)
+void Utils::writeCSV(const std::string &filename, const std::vector<Point> &points, const std::vector<double> &accuracies, double total_accuracy)
 {
     std::ofstream file(filename);
     if (!file.is_open())
@@ -91,15 +91,20 @@ void Utils::writeCSV(const std::string &filename, const std::vector<Point> &poin
     }
 
     // Write header row so downstream tools can read the columns
-    file << "ObjectID,Latitude,Longitude,Sensor,ClusterId\n";
+    file << "ObjectID,Latitude,Longitude,Sensor,ClusterId,Accuracy,Total Accuracy\n";
 
-    for (const auto &p : points)
+    for (size_t i = 0; i < points.size(); ++i)
     {
+        const auto &p = points[i];
         file << p.object_id << ","
              << p.lat << ","
              << p.lon << ","
              << p.sensor << ","
-             << p.clusterId << "\n";
+             << p.clusterId << ","
+             << accuracies[i] << ",";
+        if (i == 0)
+            file << total_accuracy;
+        file << "\n";
     }
 
     file.close();

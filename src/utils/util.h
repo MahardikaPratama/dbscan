@@ -26,7 +26,7 @@ namespace Utils
 {
     std::vector<Point> readCSV(const std::string &filename);
 
-    void writeCSV(const std::string &filename, const std::vector<Point> &points);
+    void writeCSV(const std::string &filename, const std::vector<Point> &points, const std::vector<double> &accuracies, double total_accuracy);
 
     double haversineDistance(const Point &p1, const Point &p2);
 
