@@ -1,5 +1,5 @@
 /*
- *  harversine.cpp
+ *  Harversine.c
  *  Haversine
  *
  *  Created by Jaime Rios on 2/16/08.
@@ -8,8 +8,8 @@
 
 #include "haversine.h"
 
-#include <cmath>
 #include <numbers>
+#include <cmath>
 
 /**********************************************************************
  Haversine Formula
@@ -45,10 +45,11 @@ auto calculate_distance(const angle_t latitude1,
 
     const auto converted_lat1 = convert(latitude1);
     const auto converted_lat2 = convert(latitude2);
+
     const auto a =
         pow(sin(lat_delta / 2), 2) + cos(converted_lat1) * cos(converted_lat2) * pow(sin(lon_delta / 2), 2);
 
-    const auto c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
+    const auto c = 2 * atan2(sqrt(a), sqrt(1 - a));
     const auto d = earths_radius * c;
 
     return d;
@@ -57,5 +58,5 @@ auto calculate_distance(const angle_t latitude1,
 // convert our passed value to radians_t
 auto convert(const angle_t angle) -> radians_t
 {
-    return angle * (std::acos(-1.0) / 180.0);
+    return angle * (M_PI / 180);
 }
