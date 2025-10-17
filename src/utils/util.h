@@ -30,6 +30,9 @@ namespace Utils
 
     double haversineDistance(const Point &p1, const Point &p2);
 
+    // compute k-distance (k-th nearest neighbor) for each point, returned in kilometers
+    std::vector<double> computeKDistance(const std::vector<Point> &points, int k);
+
 }
 
 #endif // UTILS_H

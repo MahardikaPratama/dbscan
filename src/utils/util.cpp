@@ -116,3 +116,37 @@ double Utils::haversineDistance(const Point &p1, const Point &p2)
     const double horiz_km = calculate_distance(p1.lat, p1.lon, p2.lat, p2.lon);
     return horiz_km;
 }
+
+std::vector<double> Utils::computeKDistance(const std::vector<Point> &points, int k)
+{
+    const size_t n = points.size();
+    std::vector<double> kdist(n, 0.0);
+
+    if (n == 0 || k <= 0)
+        return kdist;
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        std::vector<double> dists;
+        dists.reserve(n > 0 ? n - 1 : 0);
+        for (size_t j = 0; j < n; ++j)
+        {
+            if (i == j)
+                continue;
+            double d = haversineDistance(points[i], points[j]);
+            dists.push_back(d);
+        }
+        if (dists.empty())
+        {
+            kdist[i] = 0.0;
+            continue;
+        }
+        std::sort(dists.begin(), dists.end());
+        if ((size_t)k <= dists.size())
+            kdist[i] = dists[k - 1];
+        else
+            kdist[i] = dists.back();
+    }
+
+    return kdist;
+}

@@ -22,8 +22,8 @@
 
 const double EARTH_RADIUS = 6371000.0;
 
-DBSCAN::DBSCAN(double epsilon, int minPts, std::vector<Point> &points)
-    : m_points(points), m_epsilon(epsilon), m_minPts(minPts) {}
+DBSCAN::DBSCAN(int minPts, std::vector<Point> &points)
+    : m_points(points), m_minPts(minPts) {}
 
 void DBSCAN::run()
 {
@@ -55,7 +55,11 @@ std::vector<int> DBSCAN::regionQuery(int pointIndex)
     std::vector<int> neighbors;
     for (size_t i = 0; i < m_points.size(); ++i)
     {
-        if (Utils::haversineDistance(m_points[pointIndex], m_points[i]) <= m_epsilon)
+        // symmetric epsilon: allow neighbor if distance <= max(eps_query, eps_candidate)
+        const double eps_query = m_points[pointIndex].epsilon;
+        const double eps_candidate = m_points[i].epsilon;
+        const double eps_threshold = std::max(eps_query, eps_candidate);
+        if (Utils::haversineDistance(m_points[pointIndex], m_points[i]) <= eps_threshold)
         {
             neighbors.push_back(i);
         }

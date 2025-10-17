@@ -31,18 +31,20 @@ struct Point
     int sensor{0};
     int clusterId{UNCLASSIFIED};
     bool isVisited{false};
+    // per-point epsilon (kilometers)
+    double epsilon{0.0};
 };
 
 class DBSCAN
 {
 public:
-    DBSCAN(double epsilon, int minPts, std::vector<Point> &points);
+    // Use per-point epsilons; provide minPts and reference to points
+    DBSCAN(int minPts, std::vector<Point> &points);
 
     void run();
 
 private:
     std::vector<Point> &m_points;
-    double m_epsilon;
     int m_minPts;
 
     // distance computation moved to Utils
