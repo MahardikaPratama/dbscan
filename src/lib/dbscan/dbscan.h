@@ -13,12 +13,10 @@ struct DBSCANResult
 
 class DBSCANBase
 {
-private:
+protected:
     double m_epsilon;
     int m_minPts;
     std::vector<Cluster> clusters;
-
-protected:
     virtual std::vector<int> regionQuery(int pointIndex, std::vector<Point> &all_points);
     virtual void expandCluster(int pointIndex, std::vector<int> &neighbors, int clusterId, int minPts, std::vector<Point> &all_points);
 

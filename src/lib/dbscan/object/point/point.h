@@ -14,6 +14,7 @@ private:
     int sensor;
     int clusterId;
     bool isVisited;
+    bool isCore;
 
 public:
     Point();
@@ -27,4 +28,6 @@ public:
     bool visited() const;
     void setVisited(bool v);
     std::string getId() const;
+    bool isCorePoint() const;
+    void setCorePoint(bool v);
 };

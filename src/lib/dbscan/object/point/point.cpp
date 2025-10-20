@@ -14,3 +14,5 @@ double Point::getLongitude() const { return lon; }
 bool Point::visited() const { return isVisited; }
 void Point::setVisited(bool v) { isVisited = v; }
 std::string Point::getId() const { return object_id; }
+bool Point::isCorePoint() const { return isCore; }
+void Point::setCorePoint(bool v) { isCore = v; }
