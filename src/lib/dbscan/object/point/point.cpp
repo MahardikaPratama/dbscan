@@ -16,3 +16,5 @@ void Point::setVisited(bool v) { isVisited = v; }
 std::string Point::getId() const { return object_id; }
 bool Point::isCorePoint() const { return isCore; }
 void Point::setCorePoint(bool v) { isCore = v; }
+double Point::getEpsilon() const { return epsilon; }
+void Point::setEpsilon(double eps) { epsilon = eps; }

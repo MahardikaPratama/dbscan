@@ -1,3 +1,4 @@
+
 #pragma once
 #include <string>
 #include <vector>
@@ -15,6 +16,7 @@ private:
     int clusterId;
     bool isVisited;
     bool isCore;
+    double epsilon;
 
 public:
     Point();
@@ -30,4 +32,6 @@ public:
     std::string getId() const;
     bool isCorePoint() const;
     void setCorePoint(bool v);
+    double getEpsilon() const;
+    void setEpsilon(double eps);
 };
