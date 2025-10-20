@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include "../haversine/haversine.h"
+#include <omp.h>
 
 DBSCANBase::DBSCANBase(double epsilon, int minPts)
 {
@@ -35,6 +36,10 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
 
     if (rec)
     {
+        rec->setMinSamples(this->m_minPts);
+        rec->setNumPoints((int)all_points.size());
+        rec->setThreads(omp_get_max_threads());
+
         rec->start();
         rec->startPhase("initialize");
     }
@@ -42,7 +47,13 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
     initialize(all_points);
 
     if (rec)
+    {
+        rec->setEpsilon(this->m_epsilon);
         rec->stopPhase("initialize");
+    }
+
+    if (rec)
+        rec->startPhase("clustering");
 
     int clusterId = 0;
     for (size_t i = 0; i < all_points.size(); ++i)
@@ -53,7 +64,7 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
         }
         all_points[i].setVisited(true);
 
-        std::vector<int> neighbors = regionQuery(i, all_points);
+        std::vector<int> neighbors = regionQuery(i, all_points, rec);
 
         if (neighbors.size() < m_minPts)
         {
@@ -61,12 +72,17 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
         }
         else
         {
-            expandCluster(i, neighbors, clusterId, m_minPts, all_points);
+            expandCluster(i, neighbors, clusterId, m_minPts, all_points, rec);
             clusterId++;
         }
     }
 
-    // Hitung jumlah noise dan jumlah cluster
+    if (rec)
+        rec->stopPhase("clustering");
+
+    if (rec)
+        rec->startPhase("collect_results");
+
     int num_noise = 0;
     std::set<int> cluster_ids;
     for (const auto &p : all_points)
@@ -82,11 +98,9 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
     std::vector<double> dists;
     dists.reserve(all_points.size());
 
-    // Hitung medoid (representative point) untuk setiap cluster
     std::map<int, Point> medoids;
     for (int cid : cluster_ids)
     {
-        // Cari medoid: ambil point pertama di cluster sebagai contoh
         auto it = std::find_if(all_points.begin(), all_points.end(),
                                [cid](const Point &p)
                                { return p.getCluster() == cid; });
@@ -107,29 +121,13 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
     }
 
     if (rec)
+        rec->stopPhase("collect_results");
+
+    if (rec)
     {
-        rec->setNumPoints((int)all_points.size());
-        rec->setNumNoise(num_noise);
-        rec->setNumClusters(num_clusters);
-        rec->setFinalSSE(sse);
-        if (!dists.empty())
-        {
-            double sum = 0.0;
-            double mx = dists[0];
-            double mn = dists[0];
-            for (double v : dists)
-            {
-                sum += v;
-                if (v > mx)
-                    mx = v;
-                if (v < mn)
-                    mn = v;
-            }
-            double mean = sum / dists.size();
-            std::sort(dists.begin(), dists.end());
-            double median = dists[dists.size() / 2];
-            rec->setDistanceStats(mean, median, mx, mn);
-        }
+        rec->setNumNoisePoints(num_noise);
+        rec->setNumClustersFound(num_clusters);
+
         rec->stop();
     }
 
@@ -141,12 +139,14 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
     return sse;
 }
 
-std::vector<int> DBSCANBase::regionQuery(int pointIndex, std::vector<Point> &all_points)
+std::vector<int> DBSCANBase::regionQuery(int pointIndex, std::vector<Point> &all_points, dbscan::metrics::MetricRecorder *rec)
 {
+    if (rec)
+        rec->addNeighborQueries();
+
     std::vector<int> neighbors;
     for (size_t i = 0; i < all_points.size(); ++i)
     {
-
         double dist = calculate_distance(
             all_points[pointIndex].getLatitude(), all_points[pointIndex].getLongitude(),
             all_points[i].getLatitude(), all_points[i].getLongitude());
@@ -158,7 +158,7 @@ std::vector<int> DBSCANBase::regionQuery(int pointIndex, std::vector<Point> &all
     return neighbors;
 }
 
-void DBSCANBase::expandCluster(int pointIndex, std::vector<int> &neighbors, int clusterId, int minPts, std::vector<Point> &all_points)
+void DBSCANBase::expandCluster(int pointIndex, std::vector<int> &neighbors, int clusterId, int minPts, std::vector<Point> &all_points, dbscan::metrics::MetricRecorder *rec)
 {
     all_points[pointIndex].setCluster(clusterId);
 
@@ -171,7 +171,7 @@ void DBSCANBase::expandCluster(int pointIndex, std::vector<int> &neighbors, int 
         {
             neighbor.setVisited(true);
 
-            std::vector<int> neighborNeighbors = regionQuery(neighborIndex, all_points);
+            std::vector<int> neighborNeighbors = regionQuery(neighborIndex, all_points, rec);
 
             if (neighborNeighbors.size() >= minPts)
             {

@@ -46,6 +46,13 @@ void DDBSCAN::initialize(std::vector<Point> &all_points)
 
     std::sort(all_points.begin(), all_points.end(), [](const Point &a, const Point &b)
               { return a.getEpsilon() < b.getEpsilon(); });
+
+    // Set a representative global epsilon so metrics (which expect a single
+    // epsilon value) record a sensible number. Use the percentile floor.
+    if (kdist_percentile > 0.0)
+    {
+        this->m_epsilon = kdist_percentile * epsScale;
+    }
 }
 
 std::vector<double> DDBSCAN::computeKDistance(const std::vector<Point> &points, int k)

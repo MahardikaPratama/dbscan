@@ -6,6 +6,7 @@
 #include <iostream>
 #include "../../haversine/haversine.h"
 #include "../../metrics/MetricRecorder.h"
+#include <omp.h>
 #include <set>
 #include <map>
 
@@ -23,6 +24,12 @@ double KDBSCAN::run(std::vector<Point> &all_points, DBSCANResult *out, void *met
 
     if (rec)
     {
+        // Record input params and start recorder. Epsilon recorded after
+        // initialization in case it is modified during the initialize step.
+        rec->setMinSamples(this->m_minPts);
+        rec->setNumPoints((int)all_points.size());
+        rec->setThreads(omp_get_max_threads());
+
         rec->start();
         rec->startPhase("initialize");
     }
@@ -31,7 +38,13 @@ double KDBSCAN::run(std::vector<Point> &all_points, DBSCANResult *out, void *met
     findCorePoints(all_points);
 
     if (rec)
+    {
+        // KDBSCAN's epsilon is fixed at construction, but record it after
+        // initialization for consistency with other algorithms.
+        rec->setEpsilon(this->m_epsilon);
         rec->stopPhase("initialize");
+        rec->startPhase("clustering");
+    }
 
     // Step 2: Collect core indexes
     std::vector<int> coreIndexes;
@@ -48,7 +61,7 @@ double KDBSCAN::run(std::vector<Point> &all_points, DBSCANResult *out, void *met
         if (all_points[idx].getCluster() == UNCLASSIFIED)
         {
             all_points[idx].setCluster(clusterId);
-            std::vector<int> neighbors = regionQuery(idx, all_points);
+            std::vector<int> neighbors = regionQuery(idx, all_points, rec);
             for (int nb : neighbors)
             {
                 if (all_points[nb].isCorePoint())
@@ -107,28 +120,15 @@ double KDBSCAN::run(std::vector<Point> &all_points, DBSCANResult *out, void *met
 
     if (rec)
     {
+        rec->stopPhase("clustering");
+        rec->startPhase("collect_results");
+
         rec->setNumPoints((int)all_points.size());
-        rec->setNumNoise(num_noise);
-        rec->setNumClusters(num_clusters);
-        rec->setFinalSSE(sse);
-        if (!dists.empty())
-        {
-            double sum = 0.0;
-            double mx = dists[0];
-            double mn = dists[0];
-            for (double v : dists)
-            {
-                sum += v;
-                if (v > mx)
-                    mx = v;
-                if (v < mn)
-                    mn = v;
-            }
-            double mean = sum / dists.size();
-            std::sort(dists.begin(), dists.end());
-            double median = dists[dists.size() / 2];
-            rec->setDistanceStats(mean, median, mx, mn);
-        }
+        rec->setNumNoisePoints(num_noise);
+        rec->setNumClustersFound(num_clusters);
+        // MetricRecorder doesn't currently expose SSE or distance stats setters.
+
+        rec->stopPhase("collect_results");
         rec->stop();
     }
 
@@ -144,7 +144,7 @@ void KDBSCAN::findCorePoints(std::vector<Point> &points)
 {
     for (size_t i = 0; i < points.size(); ++i)
     {
-        std::vector<int> neighbors = this->regionQuery(i, points);
+        std::vector<int> neighbors = this->regionQuery(i, points, nullptr);
         if (neighbors.size() >= static_cast<size_t>(this->m_minPts))
         {
             points[i].setCorePoint(true);
@@ -190,7 +190,7 @@ void KDBSCAN::assignBorderPoints(std::vector<Point> &points)
         if (p.isCorePoint() || p.getCluster() != UNCLASSIFIED)
             continue;
 
-        std::vector<int> neighbors = this->regionQuery(&p - &points[0], points);
+        std::vector<int> neighbors = this->regionQuery(&p - &points[0], points, nullptr);
         for (int idx : neighbors)
         {
             if (points[idx].isCorePoint())

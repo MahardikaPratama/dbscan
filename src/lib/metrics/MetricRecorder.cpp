@@ -58,22 +58,17 @@ namespace dbscan
             phase_start.erase(it);
         }
 
-        void MetricRecorder::addDistanceCalls(uint64_t n)
+        void MetricRecorder::addNeighborQueries(uint64_t n)
         {
-            distance_calls.fetch_add(n, std::memory_order_relaxed);
+            neighbor_queries.fetch_add(n, std::memory_order_relaxed);
         }
 
-        void MetricRecorder::setFinalSSE(double sse) { final_sse = sse; }
+        void MetricRecorder::setEpsilon(double eps) { epsilon = eps; }
+        void MetricRecorder::setMinSamples(int ms) { min_samples = ms; }
         void MetricRecorder::setNumPoints(int n) { num_points = n; }
-        void MetricRecorder::setNumNoise(int n) { num_noise = n; }
-        void MetricRecorder::setNumClusters(int n) { num_clusters = n; }
-        void MetricRecorder::setDistanceStats(double mean_km, double median_km, double max_km, double min_km)
-        {
-            mean_dist_km = mean_km;
-            median_dist_km = median_km;
-            max_dist_km = max_km;
-            min_dist_km = min_km;
-        }
+        void MetricRecorder::setThreads(int t) { threads = t; }
+        void MetricRecorder::setNumClustersFound(int n) { num_clusters_found = n; }
+        void MetricRecorder::setNumNoisePoints(int n) { num_noise_points = n; }
 
         bool MetricRecorder::saveToFile(const string &path) const
         {
@@ -81,26 +76,37 @@ namespace dbscan
             if (!f.is_open())
                 return false;
 
+            // Dapatkan RSS puncak terakhir dari sampler ATAU getrusage saat ini
+            long final_peak_rss = peak_rss_kb.load();
             struct rusage ru;
-            long peak_rss = 0;
             if (getrusage(RUSAGE_SELF, &ru) == 0)
-                peak_rss = ru.ru_maxrss;
+            {
+                if (ru.ru_maxrss > final_peak_rss)
+                    final_peak_rss = ru.ru_maxrss;
+            }
+
+            // Calculate percentage of noise points
+            double percentage_noise = 0.0;
+            if (num_points > 0)
+                percentage_noise = (double)num_noise_points / (double)num_points * 100.0;
 
             f << "{" << '\n';
-            f << "  \"final_sse\": " << final_sse << ",\n";
-            // RMSE = sqrt(SSE / N)
-            double rmse = 0.0;
-            if (num_points > 0)
-                rmse = sqrt(final_sse / (double)num_points);
+            f << "  \"algorithm\": \"DBSCAN\",\n";
+
+            // Input Parameters
+            f << "  \"epsilon\": " << epsilon << ",\n";
+            f << "  \"min_samples\": " << min_samples << ",\n";
             f << "  \"num_points\": " << num_points << ",\n";
-            f << "  \"num_noise\": " << num_noise << ",\n";
-            f << "  \"num_clusters\": " << num_clusters << ",\n";
-            f << "  \"rmse_km\": " << rmse << ",\n";
-            f << "  \"mean_dist_km\": " << mean_dist_km << ",\n";
-            f << "  \"median_dist_km\": " << median_dist_km << ",\n";
-            f << "  \"max_dist_km\": " << max_dist_km << ",\n";
-            f << "  \"min_dist_km\": " << min_dist_km << ",\n";
-            f << "  \"peak_rss_kb\": " << peak_rss << ",\n";
+            f << "  \"threads\": " << threads << ",\n";
+
+            // Output Metrics
+            f << "  \"num_clusters_found\": " << num_clusters_found << ",\n";
+            f << "  \"num_noise_points\": " << num_noise_points << ",\n";
+            f << "  \"percentage_noise\": " << fixed << setprecision(2) << percentage_noise << ",\n";
+
+            // Performance Metrics
+            f << "  \"peak_rss_kb\": " << final_peak_rss << ",\n";
+            f << "  \"neighbor_queries\": " << neighbor_queries.load() << ",\n";
 
             f << "  \"phases_ms\": {\n";
             bool first = true;
@@ -121,20 +127,22 @@ namespace dbscan
 
         void MetricRecorder::samplerLoop()
         {
-            // Simple sampler: sample RSS periodically and update peak
+            // Simple sampler: periodically take RSS and update peak
             using namespace std::chrono_literals;
             while (running.load())
             {
                 struct rusage ru;
                 if (getrusage(RUSAGE_SELF, &ru) == 0)
                 {
-                    long rss = ru.ru_maxrss;
+                    long rss = ru.ru_maxrss; // in KB
                     long prev = peak_rss_kb.load();
-                    if (rss > prev)
-                        peak_rss_kb.store(rss);
+                    while (rss > prev && !peak_rss_kb.compare_exchange_weak(prev, rss))
+                    {
+                        // Loop until successful
+                    }
                 }
                 std::unique_lock<std::mutex> lk(cv_m);
-                cv.wait_for(lk, 200ms);
+                cv.wait_for(lk, 200ms); // Sample every 200ms
             }
         }
 
