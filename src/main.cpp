@@ -4,7 +4,6 @@
 #include "lib/dbscan/kdbscan/kdbscan.h"
 #include "lib/dbscan/dbscan_dynamic_epsilon/dbscan_dynamic_epsilon.h"
 #include "lib/dbscan/kdbscan/kdbscan.h"
-#include "lib/dbscan/ddbscan/ddbscan.h"
 #include "lib/dbscan/object/point/point.h"
 #include "lib/data_handler/data_saver/data_saver.h"
 #include "lib/data_handler/data_reader/data_reader.h"
@@ -101,28 +100,6 @@ void run_dynamic_epsilon_dbscan(const vector<Point> &points, const string &outdi
     cout << "DBSCAN Dynamic Epsilon run completed. SSE: " << sse << " Written to " << od << endl;
 }
 
-void run_ddbscan(const vector<Point> &points, const string &outdir, const string &inputCsvPath)
-{
-    int minPts = 1;
-    vector<Point> pts = points;
-    string od = outdir + "/DDBSCAN";
-    DDBSCAN dbscan(minPts);
-    DBSCANResult res;
-    dbscan::metrics::MetricRecorder *recorder = nullptr;
-    // Cek apakah environment metrics aktif
-    if (getenv("DBSCAN_ENABLE_METRICS"))
-    {
-        static dbscan::metrics::MetricRecorder static_rec;
-        recorder = &static_rec;
-    }
-    double sse = dbscan.run(pts, &res, recorder);
-    DataSaver::save(res, od, inputCsvPath, true);
-    if (recorder)
-    {
-        recorder->saveToFile(od + "/dbscan_metrics.json");
-    }
-    cout << "DDBSCAN run completed. SSE: " << sse << " Written to " << od << endl;
-}
 
 int main(int argc, char **argv)
 {
@@ -175,11 +152,6 @@ int main(int argc, char **argv)
     pts = points;
     od = outdir + "/KDBSCAN";
     run_kdbscan(pts, outdir, input);
-
-    // Run DDBSCAN
-    pts = points;
-    od = outdir + "/DDBSCAN";
-    run_ddbscan(pts, outdir, input);
 
     // Run Dynamic Epsilon DBSCAN
     pts = points;
