@@ -31,7 +31,7 @@ double KDBSCAN::run(std::vector<Point> &all_points, DBSCANResult *out, void *met
         rec->setThreads(omp_get_max_threads());
 
         rec->start();
-        rec->startPhase("initialize");
+        rec->startPhase("execution_time_ms");
     }
 
     // Step 1: Find core points
@@ -42,8 +42,6 @@ double KDBSCAN::run(std::vector<Point> &all_points, DBSCANResult *out, void *met
         // KDBSCAN's epsilon is fixed at construction, but record it after
         // initialization for consistency with other algorithms.
         rec->setEpsilon(this->m_epsilon);
-        rec->stopPhase("initialize");
-        rec->startPhase("clustering");
     }
 
     // Step 2: Collect core indexes
@@ -120,15 +118,10 @@ double KDBSCAN::run(std::vector<Point> &all_points, DBSCANResult *out, void *met
 
     if (rec)
     {
-        rec->stopPhase("clustering");
-        rec->startPhase("collect_results");
-
         rec->setNumPoints((int)all_points.size());
         rec->setNumNoisePoints(num_noise);
         rec->setNumClustersFound(num_clusters);
-        // MetricRecorder doesn't currently expose SSE or distance stats setters.
-
-        rec->stopPhase("collect_results");
+        rec->stopPhase("execution_time_ms");
         rec->stop();
     }
 
