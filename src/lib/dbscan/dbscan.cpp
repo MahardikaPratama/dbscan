@@ -41,7 +41,7 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
         rec->setThreads(omp_get_max_threads());
 
         rec->start();
-        rec->startPhase("initialize");
+        rec->startPhase("execution_time_ms");
     }
 
     initialize(all_points);
@@ -49,11 +49,7 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
     if (rec)
     {
         rec->setEpsilon(this->m_epsilon);
-        rec->stopPhase("initialize");
     }
-
-    if (rec)
-        rec->startPhase("clustering");
 
     int clusterId = 0;
     for (size_t i = 0; i < all_points.size(); ++i)
@@ -78,10 +74,7 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
     }
 
     if (rec)
-        rec->stopPhase("clustering");
-
-    if (rec)
-        rec->startPhase("collect_results");
+        rec->stopPhase("execution_time_ms");
 
     int num_noise = 0;
     std::set<int> cluster_ids;
@@ -119,9 +112,6 @@ double DBSCANBase::run(std::vector<Point> &all_points, DBSCANResult *out, void *
         dists.push_back(dist);
         sse += dist * dist;
     }
-
-    if (rec)
-        rec->stopPhase("collect_results");
 
     if (rec)
     {
